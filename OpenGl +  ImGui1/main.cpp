@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -149,7 +150,7 @@ int main()
             }
 
             if (ImGui::BeginMenu("Hilfe")) {
-                if (ImGui::MenuItem("über")) {
+                if (ImGui::MenuItem("Über")) {
                     // Show about dialog
                 }
                 ImGui::EndMenu();
@@ -158,87 +159,184 @@ int main()
             ImGui::EndMainMenuBar();
         }
 
-        // Main workspace with tabs
-        ImGui::Begin("Workspace", nullptr, ImGuiWindowFlags_MenuBar);
+        // === 3 Fenster ===
 
-        if (ImGui::BeginTabBar("MainTabs")) {
-            // Tab 1: Scene Editor
-            if (ImGui::BeginTabItem("Scene Editor")) {
-                // Split view within tab
-                static bool showLeftPanel = true;
-                static bool showRightPanel = true;
+        // 1. Objekte & Layer
+        ImGui::Begin("Objekte & Ebenen");
 
-                if (showLeftPanel) {
-                    ImGui::BeginChild("LeftPanel", ImVec2(280, 0), true);
-                    zeigeObjektBrowser();
-                    ImGui::EndChild();
-                    ImGui::SameLine();
+        ImGui::Text("Objekte");
+        ImGui::Separator();
+
+        // Schnell hinzufügen
+        if (ImGui::Button("+ Rechteck")) addObjeckt(Rechteck);
+        ImGui::SameLine();
+        if (ImGui::Button("+ Kreis")) addObjeckt(Kreis);
+        ImGui::SameLine();
+        if (ImGui::Button("+ Dreieck")) addObjeckt(Dreieck);
+
+        ImGui::Separator();
+
+        // Objektliste
+        for (int i = 0; i < (int)objeckteListe.size(); i++) {
+            Objeckte& obj = objeckteListe[i];
+            ImGui::PushID(i);
+
+            ImGui::Checkbox("##vis", &obj.visible);
+            ImGui::SameLine();
+
+            bool isSelected = (selectedObjectIndex == i);
+            const char* formName = obj.form == Rechteck ? "[R]" : obj.form == Kreis ? "[K]" : "[D]";
+            char label[128];
+            snprintf(label, sizeof(label), "%s %s", formName, obj.name.c_str());
+
+            if (ImGui::Selectable(label, isSelected)) {
+                selectedObjectIndex = i;
+            }
+
+            // Ebene direkt inline ändern
+            if (isSelected) {
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(90);
+                std::string layerPreview = (obj.layer >= 0 && obj.layer < (int)layers.size())
+                    ? layers[obj.layer].name : "?";
+                if (ImGui::BeginCombo("##lyr", layerPreview.c_str())) {
+                    for (int l = 0; l < (int)layers.size(); l++) {
+                        if (ImGui::Selectable(layers[l].name.c_str(), obj.layer == l))
+                            obj.layer = l;
+                    }
+                    ImGui::EndCombo();
                 }
-
-                // Center area - Canvas
-                ImGui::BeginChild("CanvasArea", ImVec2(0, 0), true);
-                zeigeAnzeigeFenster();
-                ImGui::EndChild();
-
-                if (showRightPanel) {
-                    ImGui::SameLine();
-                    ImGui::BeginChild("RightPanel", ImVec2(320, 0), true);
-                    zeichneEditFenster();
-                    ImGui::EndChild();
-                }
-
-                ImGui::EndTabItem();
             }
 
-            // Tab 2: Object List
-            if (ImGui::BeginTabItem("Object List")) {
-                zeigeErweiterteObjektListe();
-                ImGui::EndTabItem();
+            ImGui::SameLine();
+            if (ImGui::SmallButton("X")) {
+                objeckteListe.erase(objeckteListe.begin() + i);
+                if (selectedObjectIndex >= (int)objeckteListe.size())
+                    selectedObjectIndex = (int)objeckteListe.size() - 1;
+                ImGui::PopID();
+                goto endObjList;
             }
 
-            // Tab 3: Layer Editor
-            if (ImGui::BeginTabItem("Layer Editor")) {
-                zeigeLayerEditor();
-                ImGui::EndTabItem();
-            }
+            ImGui::PopID();
+        }
+    endObjList:;
 
-            // Tab 4: Properties
-            if (ImGui::BeginTabItem("Properties")) {
-                zeigeErweiterteEigenschaften();
-                ImGui::EndTabItem();
-            }
+        ImGui::Separator();
+        ImGui::Text("Ebenen");
+        ImGui::Separator();
 
-            // Tab 5: Console
-            if (ImGui::BeginTabItem("Console")) {
-                zeigeConsole();
-                ImGui::EndTabItem();
-            }
+        if (ImGui::Button("+ Ebene")) addLayer();
+        ImGui::SameLine();
+        if (ImGui::Button("- Ebene") && layers.size() > 1) {
+            removeLayer(selectedLayerIndex);
+            if (selectedLayerIndex >= (int)layers.size())
+                selectedLayerIndex = (int)layers.size() - 1;
+        }
 
-            ImGui::EndTabBar();
+        for (int i = 0; i < (int)layers.size(); i++) {
+            Layer& layer = layers[i];
+            ImGui::PushID(1000 + i);
+            ImGui::Checkbox("##lvis", &layer.visible);
+            ImGui::SameLine();
+            bool isSel = (selectedLayerIndex == i);
+            if (ImGui::Selectable(layer.name.c_str(), isSel))
+                selectedLayerIndex = i;
+            ImGui::PopID();
         }
 
         ImGui::End();
 
-        // Additional floating windows
-        if (showDemoWindow) {
-            ImGui::ShowDemoWindow(&showDemoWindow);
+        // 2. Render / Canvas
+        zeigeAnzeigeFenster();
+
+        // 3. Einstellungen
+        ImGui::Begin("Einstellungen");
+
+        if (selectedObjectIndex >= 0 && selectedObjectIndex < (int)objeckteListe.size()) {
+            Objeckte& obj = objeckteListe[selectedObjectIndex];
+
+            ImGui::Text("Objekt: %s", obj.name.c_str());
+            ImGui::Separator();
+
+            // Name - using char array with safe string handling
+            static char nameBuf[256] = "";
+            strncpy(nameBuf, obj.name.c_str(), sizeof(nameBuf) - 1);
+            nameBuf[sizeof(nameBuf) - 1] = '\0';
+            if (ImGui::InputText("Name", nameBuf, sizeof(nameBuf))) {
+                obj.name = nameBuf;
+            }
+
+            // Position
+            ImGui::DragFloat("Position X", &obj.PositionX, 1.0f);
+            ImGui::DragFloat("Position Y", &obj.PositionY, 1.0f);
+
+            ImGui::Separator();
+
+            // Farbe
+            float col[4] = {
+                obj.farbe.r / 255.0f,
+                obj.farbe.g / 255.0f,
+                obj.farbe.b / 255.0f,
+                obj.farbe.a / 255.0f
+            };
+            if (ImGui::ColorEdit4("Farbe", col)) {
+                obj.farbe.r = (unsigned char)(col[0] * 255);
+                obj.farbe.g = (unsigned char)(col[1] * 255);
+                obj.farbe.b = (unsigned char)(col[2] * 255);
+                obj.farbe.a = (unsigned char)(col[3] * 255);
+            }
+
+            ImGui::Separator();
+
+            // Sichtbar / Gesperrt
+            ImGui::Checkbox("Sichtbar", &obj.visible);
+            ImGui::Checkbox("Gesperrt", &obj.locked);
+
+            ImGui::Separator();
+
+            // Ebene
+            ImGui::Text("Ebene:");
+            ImGui::SameLine();
+            std::string layerPrev = (obj.layer >= 0 && obj.layer < (int)layers.size())
+                ? layers[obj.layer].name : "?";
+            if (ImGui::BeginCombo("##einst_lyr", layerPrev.c_str())) {
+                for (int l = 0; l < (int)layers.size(); l++) {
+                    if (ImGui::Selectable(layers[l].name.c_str(), obj.layer == l))
+                        obj.layer = l;
+                }
+                ImGui::EndCombo();
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::Button("Duplizieren")) {
+                Objeckte copy = obj;
+                copy.name = obj.name + "_copy";
+                copy.PositionX += 30;
+                copy.PositionY += 30;
+                objeckteListe.push_back(copy);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Löschen")) {
+                objeckteListe.erase(objeckteListe.begin() + selectedObjectIndex);
+                selectedObjectIndex = -1;
+            }
+        }
+        else {
+            ImGui::TextDisabled("Kein Objekt ausgewählt");
         }
 
+        ImGui::End();
+
+        if (showDemoWindow) ImGui::ShowDemoWindow(&showDemoWindow);
         if (showStyleEditor) {
             ImGui::Begin("Style Editor", &showStyleEditor);
             ImGui::ShowStyleEditor();
             ImGui::End();
         }
 
-        // Status bar
-        if (ImGui::BeginMainMenuBar()) {
-            ImGui::Text("Status: Bereit | Objekte: %zu | Ausgewählt: %s",
-                objeckteListe.size(),
-                selectedObjectIndex >= 0 ? objeckteListe[selectedObjectIndex].name.c_str() : "Keins");
-            ImGui::EndMainMenuBar();
-        }
-
         // Render ImGui
+
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
