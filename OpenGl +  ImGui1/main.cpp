@@ -116,12 +116,12 @@ int main()
             }
 
             if (ImGui::BeginMenu("Bearbeiten")) {
-                if (ImGui::MenuItem("Rückgängig", "Ctrl+Z")) {}
+                if (ImGui::MenuItem("Rueckgaengig", "Ctrl+Z")) {}
                 if (ImGui::MenuItem("Wiederholen", "Ctrl+Y")) {}
                 ImGui::Separator();
                 if (ImGui::MenuItem("Ausschneiden", "Ctrl+X")) {}
                 if (ImGui::MenuItem("Kopieren", "Ctrl+C")) {}
-                if (ImGui::MenuItem("Einfügen", "Ctrl+V")) {}
+                if (ImGui::MenuItem("Einfuegen", "Ctrl+V")) {}
                 ImGui::EndMenu();
             }
 
@@ -132,17 +132,17 @@ int main()
             }
 
             if (ImGui::BeginMenu("Objekte")) {
-                if (ImGui::MenuItem("Rechteck hinzufügen")) {
+                if (ImGui::MenuItem("Rechteck hinzufuegen")) {
                     addObjeckt(Rechteck);
                 }
-                if (ImGui::MenuItem("Kreis hinzufügen")) {
+                if (ImGui::MenuItem("Kreis hinzufuegen")) {
                     addObjeckt(Kreis);
                 }
-                if (ImGui::MenuItem("Dreieck hinzufügen")) {
+                if (ImGui::MenuItem("Dreieck hinzufuegen")) {
                     addObjeckt(Dreieck);
                 }
                 ImGui::Separator();
-                if (ImGui::MenuItem("Alle löschen")) {
+                if (ImGui::MenuItem("Alle loeschen")) {
                     objeckteListe.clear();
                     selectedObjectIndex = -1;
                 }
@@ -150,7 +150,7 @@ int main()
             }
 
             if (ImGui::BeginMenu("Hilfe")) {
-                if (ImGui::MenuItem("Über")) {
+                if (ImGui::MenuItem("ueber")) {
                     // Show about dialog
                 }
                 ImGui::EndMenu();
@@ -167,7 +167,6 @@ int main()
         ImGui::Text("Objekte");
         ImGui::Separator();
 
-        // Schnell hinzufügen
         if (ImGui::Button("+ Rechteck")) addObjeckt(Rechteck);
         ImGui::SameLine();
         if (ImGui::Button("+ Kreis")) addObjeckt(Kreis);
@@ -193,7 +192,6 @@ int main()
                 selectedObjectIndex = i;
             }
 
-            // Ebene direkt inline ändern
             if (isSelected) {
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(90);
@@ -260,8 +258,7 @@ int main()
 
             // Name - using char array with safe string handling
             static char nameBuf[256] = "";
-            strncpy(nameBuf, obj.name.c_str(), sizeof(nameBuf) - 1);
-            nameBuf[sizeof(nameBuf) - 1] = '\0';
+            strncpy_s(nameBuf, sizeof(nameBuf), obj.name.c_str(), _TRUNCATE);
             if (ImGui::InputText("Name", nameBuf, sizeof(nameBuf))) {
                 obj.name = nameBuf;
             }
@@ -269,6 +266,13 @@ int main()
             // Position
             ImGui::DragFloat("Position X", &obj.PositionX, 1.0f);
             ImGui::DragFloat("Position Y", &obj.PositionY, 1.0f);
+
+            ImGui::Separator();
+
+            // Groesse
+            ImGui::Text("Groesse");
+            ImGui::DragFloat("Breite", &obj.breite, 1.0f, 1.0f, 2000.0f);
+            ImGui::DragFloat("Hoehe", &obj.hoe, 1.0f, 1.0f, 2000.0f);
 
             ImGui::Separator();
 
@@ -317,13 +321,13 @@ int main()
                 objeckteListe.push_back(copy);
             }
             ImGui::SameLine();
-            if (ImGui::Button("Löschen")) {
+            if (ImGui::Button("Loeschen")) {
                 objeckteListe.erase(objeckteListe.begin() + selectedObjectIndex);
                 selectedObjectIndex = -1;
             }
         }
         else {
-            ImGui::TextDisabled("Kein Objekt ausgewählt");
+            ImGui::TextDisabled("Kein Objekt ausgewaehlt");
         }
 
         ImGui::End();

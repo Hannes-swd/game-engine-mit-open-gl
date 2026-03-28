@@ -19,6 +19,8 @@ struct Objeckte {
     formen form;
     float PositionX;
     float PositionY;
+    float hoe;
+    float breite;
     ColorRGBA farbe;
     bool visible = true;
     bool locked = false;

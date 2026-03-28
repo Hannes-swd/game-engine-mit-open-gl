@@ -23,13 +23,9 @@ void objecktaddbutton() {
         for (int i = 0; i < 3; i++) {
             if (ImGui::Selectable(items[i], selected == i)) {
                 selected = i;
-
-                if (i == 0)
-                    addObjeckt(Rechteck);
-                else if (i == 1)
-                    addObjeckt(Kreis);
-                else if (i == 2)
-                    addObjeckt(Dreieck);
+                if (i == 0) addObjeckt(Rechteck);
+                else if (i == 1) addObjeckt(Kreis);
+                else if (i == 2) addObjeckt(Dreieck);
             }
         }
         ImGui::EndCombo();
@@ -42,13 +38,15 @@ void addObjeckt(formen form) {
     neuesObjekt.form = form;
     neuesObjekt.PositionX = 400 + (objeckteListe.size() * 20);
     neuesObjekt.PositionY = 300 + (objeckteListe.size() * 20);
+    neuesObjekt.hoe = 50;       // War 10 - jetzt sinnvoller Standardwert
+    neuesObjekt.breite = 50;    // War 10 - jetzt sinnvoller Standardwert
     neuesObjekt.farbe = { 255, 0, 0, 255 };
     neuesObjekt.visible = true;
     neuesObjekt.locked = false;
     neuesObjekt.layer = 0;
 
     objeckteListe.push_back(neuesObjekt);
-    addConsoleLog("Objekt hinzugefügt: " + neuesObjekt.name);
+    addConsoleLog("Objekt hinzugefuegt: " + neuesObjekt.name);
 }
 
 void zeigeObjeckte() {
@@ -57,93 +55,72 @@ void zeigeObjeckte() {
 
         ImGui::PushID(i);
 
-        // Visibility toggle
         if (ImGui::Checkbox("##visible", &obj.visible)) {
             addConsoleLog(obj.name + " Sichtbarkeit: " + (obj.visible ? "An" : "Aus"));
         }
         ImGui::SameLine();
 
-        // Lock toggle
         if (ImGui::Checkbox("##locked", &obj.locked)) {
             addConsoleLog(obj.name + " Gesperrt: " + (obj.locked ? "Ja" : "Nein"));
         }
         ImGui::SameLine();
 
         std::string label = obj.name + "| ";
-
         switch (obj.form) {
         case Rechteck: label += "Rechteck"; break;
-        case Kreis: label += "Kreis"; break;
-        case Dreieck: label += "Dreieck"; break;
+        case Kreis:    label += "Kreis";    break;
+        case Dreieck:  label += "Dreieck";  break;
         }
-
         label += " (X: " + std::to_string((int)obj.PositionX) +
             ", Y: " + std::to_string((int)obj.PositionY) + ")";
 
         bool isSelected = (selectedObjectIndex == (int)i);
 
-        // Delete button
         if (ImGui::Button("X")) {
-            addConsoleLog("Objekt gelöscht: " + obj.name);
+            addConsoleLog("Objekt geloescht: " + obj.name);
             objeckteListe.erase(objeckteListe.begin() + i);
-            if (selectedObjectIndex == (int)i) {
-                selectedObjectIndex = -1;
-            }
-            else if (selectedObjectIndex > (int)i) {
-                selectedObjectIndex--;
-            }
+            if (selectedObjectIndex == (int)i) selectedObjectIndex = -1;
+            else if (selectedObjectIndex > (int)i) selectedObjectIndex--;
             ImGui::PopID();
             break;
         }
-
         ImGui::SameLine();
 
-        // Selectable
         float selectableWidth = ImGui::GetContentRegionAvail().x;
         if (ImGui::Selectable(label.c_str(), isSelected,
             ImGuiSelectableFlags_AllowDoubleClick, ImVec2(selectableWidth, 0))) {
             if (!obj.locked) {
-                if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && isSelected) {
+                if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && isSelected)
                     selectedObjectIndex = -1;
-                }
                 else if (!ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
                     selectedObjectIndex = (int)i;
-                    addConsoleLog("Ausgewählt: " + obj.name);
+                    addConsoleLog("Ausgewaehlt: " + obj.name);
                 }
             }
         }
 
-        // Drag & Drop source
         if (ImGui::BeginDragDropSource()) {
             ImGui::SetDragDropPayload("DND_OBJECT", &i, sizeof(size_t));
             ImGui::Text("Verschiebe: %s", obj.name.c_str());
             ImGui::EndDragDropSource();
         }
 
-        // Drag & Drop target
         if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_OBJECT")) {
                 size_t sourceIndex = *(const size_t*)payload->Data;
                 if (sourceIndex != i) {
                     Objeckte temp = objeckteListe[sourceIndex];
                     objeckteListe.erase(objeckteListe.begin() + sourceIndex);
-
                     size_t targetIndex = i;
-                    if (sourceIndex < targetIndex) {
-                        targetIndex--;
-                    }
+                    if (sourceIndex < targetIndex) targetIndex--;
                     objeckteListe.insert(objeckteListe.begin() + targetIndex, temp);
                     addConsoleLog("Objekt neu angeordnet");
-
-                    if (selectedObjectIndex == (int)sourceIndex) {
+                    if (selectedObjectIndex == (int)sourceIndex)
                         selectedObjectIndex = (int)targetIndex;
-                    }
-                    else if (selectedObjectIndex > (int)sourceIndex && selectedObjectIndex <= (int)targetIndex) {
+                    else if (selectedObjectIndex > (int)sourceIndex && selectedObjectIndex <= (int)targetIndex)
                         selectedObjectIndex--;
-                    }
-                    else if (selectedObjectIndex < (int)sourceIndex && selectedObjectIndex >= (int)targetIndex) {
+                    else if (selectedObjectIndex < (int)sourceIndex && selectedObjectIndex >= (int)targetIndex)
                         selectedObjectIndex++;
-                    }
                 }
             }
             ImGui::EndDragDropTarget();
@@ -158,13 +135,10 @@ void zeigeErweiterteObjektListe() {
     ImGui::Text("Objekt Management");
     ImGui::Separator();
 
-    // Filter
     static char filterBuffer[256] = "";
     ImGui::InputText("Filter", filterBuffer, sizeof(filterBuffer));
 
-    // Statistics
-    int visibleCount = 0;
-    int lockedCount = 0;
+    int visibleCount = 0, lockedCount = 0;
     for (const auto& obj : objeckteListe) {
         if (obj.visible) visibleCount++;
         if (obj.locked) lockedCount++;
@@ -173,49 +147,29 @@ void zeigeErweiterteObjektListe() {
     ImGui::Text("Gesamt: %zu | Sichtbar: %d | Gesperrt: %d", objeckteListe.size(), visibleCount, lockedCount);
     ImGui::Separator();
 
-    // Batch operations
-    if (ImGui::Button("Alle sichtbar")) {
-        for (auto& obj : objeckteListe) obj.visible = true;
-        addConsoleLog("Alle Objekte sichtbar gemacht");
-    }
+    if (ImGui::Button("Alle sichtbar")) { for (auto& obj : objeckteListe) obj.visible = true; }
     ImGui::SameLine();
-    if (ImGui::Button("Alle unsichtbar")) {
-        for (auto& obj : objeckteListe) obj.visible = false;
-        addConsoleLog("Alle Objekte unsichtbar gemacht");
-    }
+    if (ImGui::Button("Alle unsichtbar")) { for (auto& obj : objeckteListe) obj.visible = false; }
     ImGui::SameLine();
-    if (ImGui::Button("Alle entsperren")) {
-        for (auto& obj : objeckteListe) obj.locked = false;
-        addConsoleLog("Alle Objekte entsperrt");
-    }
+    if (ImGui::Button("Alle entsperren")) { for (auto& obj : objeckteListe) obj.locked = false; }
 
     ImGui::Separator();
 
-    // List with filtering
     for (size_t i = 0; i < objeckteListe.size(); i++) {
         Objeckte& obj = objeckteListe[i];
-
-        // Apply filter
         std::string filterStr = filterBuffer;
-        if (!filterStr.empty() && obj.name.find(filterStr) == std::string::npos) {
-            continue;
-        }
+        if (!filterStr.empty() && obj.name.find(filterStr) == std::string::npos) continue;
 
         ImGui::PushID(i);
-
-        // Color indicator
-        ImGui::ColorButton("##color", ImVec4(obj.farbe.r / 255.0f, obj.farbe.g / 255.0f, obj.farbe.b / 255.0f, obj.farbe.a / 255.0f),
+        ImGui::ColorButton("##color",
+            ImVec4(obj.farbe.r / 255.0f, obj.farbe.g / 255.0f, obj.farbe.b / 255.0f, obj.farbe.a / 255.0f),
             ImGuiColorEditFlags_NoTooltip, ImVec2(16, 16));
         ImGui::SameLine();
 
-        // Selection
         bool isSelected = (selectedObjectIndex == (int)i);
         if (ImGui::Selectable(obj.name.c_str(), isSelected)) {
-            if (!obj.locked) {
-                selectedObjectIndex = (int)i;
-            }
+            if (!obj.locked) selectedObjectIndex = (int)i;
         }
-
         ImGui::PopID();
     }
 }
@@ -223,41 +177,24 @@ void zeigeErweiterteObjektListe() {
 void zeigeObjektBrowser() {
     ImGui::Text("Objekt Browser");
     ImGui::Separator();
-
-    // Quick add buttons
-    ImGui::Text("Schnell hinzufügen:");
+    ImGui::Text("Schnell hinzufuegen:");
     if (ImGui::Button("Rechteck")) addObjeckt(Rechteck);
     ImGui::SameLine();
     if (ImGui::Button("Kreis")) addObjeckt(Kreis);
     ImGui::SameLine();
     if (ImGui::Button("Dreieck")) addObjeckt(Dreieck);
-
     ImGui::Separator();
 
-    // Object list with icons
     for (size_t i = 0; i < objeckteListe.size(); i++) {
         Objeckte& obj = objeckteListe[i];
-
         ImGui::PushID(i);
-
-        // Icon based on shape
-        const char* icon = "x";
-        switch (obj.form) {
-        case Rechteck: icon = "x"; break;
-        case Kreis: icon = "o"; break;
-        case Dreieck: icon = "a"; break;
-        }
-
+        const char* icon = (obj.form == Rechteck) ? "[R]" : (obj.form == Kreis) ? "[K]" : "[D]";
         ImGui::Text("%s", icon);
         ImGui::SameLine();
-
         bool isSelected = (selectedObjectIndex == (int)i);
         if (ImGui::Selectable(obj.name.c_str(), isSelected)) {
-            if (!obj.locked) {
-                selectedObjectIndex = (int)i;
-            }
+            if (!obj.locked) selectedObjectIndex = (int)i;
         }
-
         ImGui::PopID();
     }
 }
@@ -272,7 +209,6 @@ void zeichneObjeckte() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    // Sort by layer
     std::vector<Objeckte> sortedObjects = objeckteListe;
     std::sort(sortedObjects.begin(), sortedObjects.end(),
         [](const Objeckte& a, const Objeckte& b) { return a.layer < b.layer; });
@@ -282,28 +218,30 @@ void zeichneObjeckte() {
 
         glColor4ub(obj.farbe.r, obj.farbe.g, obj.farbe.b, obj.farbe.a);
 
+        float w = obj.breite;
+        float h = obj.hoe;
+
         switch (obj.form) {
         case Rechteck:
             glBegin(GL_QUADS);
             glVertex2f(obj.PositionX, obj.PositionY);
-            glVertex2f(obj.PositionX + 50, obj.PositionY);
-            glVertex2f(obj.PositionX + 50, obj.PositionY + 50);
-            glVertex2f(obj.PositionX, obj.PositionY + 50);
+            glVertex2f(obj.PositionX + w, obj.PositionY);
+            glVertex2f(obj.PositionX + w, obj.PositionY + h);
+            glVertex2f(obj.PositionX, obj.PositionY + h);
             glEnd();
             break;
 
         case Kreis: {
-            float radius = 25;
-            float x = obj.PositionX + radius;
-            float y = obj.PositionY + radius;
+            float rx = w / 2.0f;
+            float ry = h / 2.0f;
+            float cx = obj.PositionX + rx;
+            float cy = obj.PositionY + ry;
             int segments = 32;
             glBegin(GL_TRIANGLE_FAN);
-            glVertex2f(x, y);
+            glVertex2f(cx, cy);
             for (int i = 0; i <= segments; i++) {
                 float angle = 2.0f * 3.14159f * i / segments;
-                float dx = radius * cosf(angle);
-                float dy = radius * sinf(angle);
-                glVertex2f(x + dx, y + dy);
+                glVertex2f(cx + rx * cosf(angle), cy + ry * sinf(angle));
             }
             glEnd();
             break;
@@ -311,9 +249,9 @@ void zeichneObjeckte() {
 
         case Dreieck:
             glBegin(GL_TRIANGLES);
-            glVertex2f(obj.PositionX + 25, obj.PositionY);
-            glVertex2f(obj.PositionX, obj.PositionY + 50);
-            glVertex2f(obj.PositionX + 50, obj.PositionY + 50);
+            glVertex2f(obj.PositionX + w / 2.0f, obj.PositionY);
+            glVertex2f(obj.PositionX, obj.PositionY + h);
+            glVertex2f(obj.PositionX + w, obj.PositionY + h);
             glEnd();
             break;
         }
@@ -325,27 +263,29 @@ void zeichneObjeckte() {
         if (obj.visible) {
             glColor4ub(255, 255, 0, 255);
 
+            float w = obj.breite;
+            float h = obj.hoe;
+
             switch (obj.form) {
             case Rechteck:
                 glBegin(GL_LINE_LOOP);
                 glVertex2f(obj.PositionX, obj.PositionY);
-                glVertex2f(obj.PositionX + 50, obj.PositionY);
-                glVertex2f(obj.PositionX + 50, obj.PositionY + 50);
-                glVertex2f(obj.PositionX, obj.PositionY + 50);
+                glVertex2f(obj.PositionX + w, obj.PositionY);
+                glVertex2f(obj.PositionX + w, obj.PositionY + h);
+                glVertex2f(obj.PositionX, obj.PositionY + h);
                 glEnd();
                 break;
 
             case Kreis: {
-                float radius = 25;
-                float x = obj.PositionX + radius;
-                float y = obj.PositionY + radius;
+                float rx = w / 2.0f;
+                float ry = h / 2.0f;
+                float cx = obj.PositionX + rx;
+                float cy = obj.PositionY + ry;
                 int segments = 32;
                 glBegin(GL_LINE_LOOP);
                 for (int i = 0; i <= segments; i++) {
                     float angle = 2.0f * 3.14159f * i / segments;
-                    float dx = radius * cosf(angle);
-                    float dy = radius * sinf(angle);
-                    glVertex2f(x + dx, y + dy);
+                    glVertex2f(cx + rx * cosf(angle), cy + ry * sinf(angle));
                 }
                 glEnd();
                 break;
@@ -353,9 +293,9 @@ void zeichneObjeckte() {
 
             case Dreieck:
                 glBegin(GL_LINE_LOOP);
-                glVertex2f(obj.PositionX + 25, obj.PositionY);
-                glVertex2f(obj.PositionX, obj.PositionY + 50);
-                glVertex2f(obj.PositionX + 50, obj.PositionY + 50);
+                glVertex2f(obj.PositionX + w / 2.0f, obj.PositionY);
+                glVertex2f(obj.PositionX, obj.PositionY + h);
+                glVertex2f(obj.PositionX + w, obj.PositionY + h);
                 glEnd();
                 break;
             }
@@ -364,19 +304,16 @@ void zeichneObjeckte() {
 }
 
 void zeigeConsole() {
+    static std::vector<std::string>& logs = consoleLogs;
+
     ImGui::Text("Console Output");
     ImGui::Separator();
 
-    if (ImGui::Button("Clear")) {
-        consoleLogs.clear();
-    }
+    if (ImGui::Button("Clear")) consoleLogs.clear();
     ImGui::SameLine();
-    if (ImGui::Button("Scroll to bottom")) {
-        ImGui::SetScrollHereY(1.0f);
-    }
+    if (ImGui::Button("Scroll to bottom")) ImGui::SetScrollHereY(1.0f);
 
     ImGui::Separator();
-
     ImGui::BeginChild("ConsoleScroll");
     for (const auto& log : consoleLogs) {
         ImGui::TextWrapped("%s", log.c_str());
