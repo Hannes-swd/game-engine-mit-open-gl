@@ -4,3 +4,4 @@
 #include "objeckte.h"
 
 void zeigeAnzeigeFenster();
+void verschiebeObjeckte(const Objeckte& obj);

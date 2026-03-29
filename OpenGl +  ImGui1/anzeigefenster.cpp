@@ -120,6 +120,42 @@ void zeigeAnzeigeFenster() {
             ImGui::ResetMouseDragDelta(ImGuiMouseButton_Right);
         }
 
+        // Objekt verschieben mit linker Maustaste gehalten
+        static float dragStartObjX = 0, dragStartObjY = 0;
+        static ImVec2 dragStartMouse = { 0, 0 };
+        static int draggedIndex = -1;
+
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+            selectedObjectIndex >= 0 && selectedObjectIndex < (int)objeckteListe.size()) {
+            draggedIndex = selectedObjectIndex;
+            dragStartObjX = objeckteListe[draggedIndex].PositionX;
+            dragStartObjY = objeckteListe[draggedIndex].PositionY;
+            dragStartMouse = ImGui::GetMousePos();
+        }
+
+        if (ImGui::IsMouseDragging(ImGuiMouseButton_Left) &&
+            draggedIndex >= 0 && draggedIndex < (int)objeckteListe.size()) {
+            Objeckte& dragObj = objeckteListe[draggedIndex];
+            if (!dragObj.locked) {
+                ImVec2 mouseNow = ImGui::GetMousePos();
+                float newX = dragStartObjX + (mouseNow.x - dragStartMouse.x) / zoom;
+                float newY = dragStartObjY + (mouseNow.y - dragStartMouse.y) / zoom;
+
+                if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) {
+                    float grid = 50.0f;
+                    newX = roundf(newX / grid) * grid;
+                    newY = roundf(newY / grid) * grid;
+                }
+
+                dragObj.PositionX = newX;
+                dragObj.PositionY = newY;
+            }
+        }
+
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            draggedIndex = -1;
+        }
+
         // Object selection with left click
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
             ImVec2 mousePos = ImGui::GetMousePos();
